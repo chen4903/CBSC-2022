@@ -3,7 +3,8 @@ pragma solidity ^0.8.2;
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./contracts/token/ERC20/ERC20.sol";
 import "./contracts/proxy/utils/Initializable.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
+
 interface IMdexFactory {
 
     function feeTo() external view returns (address);
@@ -450,10 +451,10 @@ contract USDT is ERC20, Ownable {
 
 contract QuintConventionalPool is Ownable {
     using SafeMath for uint256;
-    address public distributor;
-    IMdexPair public liquidityPair;
+    address public distributor; // 操作的账户
+    IMdexPair public liquidityPair; // 币对
 
-    IERC20 public token;
+    IERC20 public token; // 操作的ERC20
 
     uint256 public totalStakedToken;
     uint256 public totalStakedLp;
@@ -509,6 +510,7 @@ contract QuintConventionalPool is Ownable {
     event flag(string result,address challenger);
     constructor() Ownable() {}
 
+    // 初始化币对
     function SetAddress(address pair, address distributortoken)
         public
         onlyOwner
@@ -519,6 +521,7 @@ contract QuintConventionalPool is Ownable {
         distributor = distributortoken;
     }
 
+    // 质押
     function stake(uint256 _amount, uint256 _index) public {
         require(_index < 2, "Invalid index");
         if (!users[msg.sender].isExists) {
@@ -553,6 +556,7 @@ contract QuintConventionalPool is Ownable {
         emit STAKE(msg.sender, _amount);
     }
 
+    // 再次质押
     function reStake(uint256 _index) public {
         require(_index < 2, "Invalid index");
         uint256 preReward;
@@ -573,6 +577,7 @@ contract QuintConventionalPool is Ownable {
         emit RESTAKE(msg.sender, preReward);
     }
 
+    // 质押token具体实现
     function stakeToken(address _user, uint256 _amount) private {
         User storage user = users[_user];
         TokenStake storage userStake = tokenStakeRecord[_user];
@@ -583,6 +588,7 @@ contract QuintConventionalPool is Ownable {
         totalStakedToken = totalStakedToken.add(_amount);
     }
 
+    // 质押LP具体实现
     function stakeLp(address _user, uint256 _amount) private {
         User storage user = users[_user];
         LpStake storage userStake = lpStakeRecord[_user];
@@ -594,6 +600,7 @@ contract QuintConventionalPool is Ownable {
         totalStakedLp = totalStakedLp.add(_amount);
     }
 
+    // 获取质押所得的利润
     function claim(uint256 _index) public {
         require(_index < 2, "Invalid index");
         User storage user = users[msg.sender];
@@ -621,6 +628,7 @@ contract QuintConventionalPool is Ownable {
         emit CLAIM(msg.sender, preReward);
     }
 
+    // 取款
     function withdraw(uint256 _index) public {
         require(_index < 2, "Invalid index");
         User storage user = users[msg.sender];
@@ -629,7 +637,7 @@ contract QuintConventionalPool is Ownable {
         if (_index == 0) {
             TokenStake storage userStake = tokenStakeRecord[msg.sender];
             amount = userStake.amount;
-            console.log("amount: %s ", amount);
+            // console.log("amount: %s ", amount);
             token.transfer(msg.sender, amount);
 
             preReward = calculateTokenReward(msg.sender);
@@ -674,6 +682,7 @@ contract QuintConventionalPool is Ownable {
         emit CLAIM(msg.sender, preReward);
     }
 
+    // 计算：质押token能得到的数量
     function calculateTokenReward(address _user)
         public
         view
@@ -681,19 +690,14 @@ contract QuintConventionalPool is Ownable {
     {
         TokenStake storage userStake = tokenStakeRecord[_user];
         uint256 rewardDuration = block.timestamp.sub(userStake.time);
-        if (block.timestamp<=startime+30 days){
-        _reward = userStake.amount.mul(rewardDuration).mul(tokenReward1).div(
-            rewardDivider
-        );
+        if (block.timestamp <= startime + 30 days){
+            _reward = userStake.amount.mul(rewardDuration).mul(tokenReward1).div(rewardDivider);
         }else {
-        _reward = userStake.amount.mul(rewardDuration).mul(tokenReward2).div(
-            rewardDivider
-        );
+            _reward = userStake.amount.mul(rewardDuration).mul(tokenReward2).div(rewardDivider);
         }
     }
 
- 
-
+    // 任务：将distributor在token中的余额设置为小于一个数值
     function captureFlag() public returns (bool) {
         if(token.balanceOf(distributor)<=50000000000000000000000){
         emit flag("succese",msg.sender);
@@ -702,6 +706,7 @@ contract QuintConventionalPool is Ownable {
         return true;
     }
 
+    // 计算：质押LP能得到的数量
     function calculateLpReward(address _user)
         public
         view
@@ -722,12 +727,14 @@ contract QuintConventionalPool is Ownable {
 
     }
 
+    // 计算token和LP的兑换
     function getTokenForLP(uint256 _lpAmount) public view returns (uint256) {
         uint256 lpSupply = liquidityPair.totalSupply();
         uint256 totalReserveInToken = getTokenReserve() * 2;
         return (totalReserveInToken * _lpAmount) / lpSupply;
     }
 
+    // 获取token的reserve
     function getTokenReserve() public view returns (uint256) {
         (uint256 token0Reserve, uint256 token1Reserve, ) = liquidityPair
             .getReserves();
@@ -737,6 +744,7 @@ contract QuintConventionalPool is Ownable {
         return token1Reserve;
     }
 
+    // 获取用户信息
     function getUserInfo(address _user)
         public
         view
@@ -758,6 +766,7 @@ contract QuintConventionalPool is Ownable {
         _totalWithdrawanLp = user.totalWithdrawanLp;
     }
 
+    // 获取用户质押token的信息
     function userTokenStakeInfo(address _user)
         public
         view
@@ -775,6 +784,7 @@ contract QuintConventionalPool is Ownable {
         _startTime = userStake.startTime;
     }
 
+    // 获取用户质押Lp的信息
     function userLpStakeInfo(address _user)
         public
         view
@@ -794,8 +804,6 @@ contract QuintConventionalPool is Ownable {
         _startTime = userStake.startTime;
     }
 }
-
-
 
 contract deploy is ERC20, Ownable,Initializable {
     IMdexFactory Factory;
@@ -834,8 +842,8 @@ contract deploy is ERC20, Ownable,Initializable {
     }
 
     function airdrop() public initializer {
-        //以后设置为只能调用一次
         _mint(msg.sender, 100000000000000000000000);
+        // 获得LP
         IMdexPair(pair).transfer(msg.sender, 99999999999999999999000);
     }
 }

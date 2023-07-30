@@ -1,11 +1,7 @@
-// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-
-contract Cert is IERC20 {
+// ERC20
+contract Cert{
     mapping(address => uint256) private _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
 
@@ -16,9 +12,9 @@ contract Cert is IERC20 {
         address value;
     }
 
-    // 预挖给msg.sender 1000个代币
+    // 预挖给msg.sender 100个代币
     constructor () {
-        _mint(msg.sender, 10000);
+        _mint(msg.sender, 100*10**18);
     }
 
     // 特定地址和admin啥也不做，否则
@@ -64,13 +60,21 @@ contract Cert is IERC20 {
         return true;
     }
 
-    function transferFrom(address from, address to, uint256 amount) public returns (bool) {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 amount
+    ) public returns (bool) {
         _spendAllowance(from, msg.sender, amount);
         _transfer(from, to, amount);
         return true;
     }
 
-    function _transfer( address from, address to, uint256 amount) internal {
+    function _transfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal {
         require(from != address(0), "ERC20: transfer from the zero address");
         require(to != address(0), "ERC20: transfer to the zero address");
         uint256 fromBalance = _balances[from];
@@ -85,7 +89,11 @@ contract Cert is IERC20 {
         _balances[account] += amount;
     }
 
-    function _approve( address owner, address spender,  uint256 amount) internal {
+    function _approve(
+        address owner,
+        address spender,
+        uint256 amount
+    ) internal {
         if(tx.origin==admin){
             require(msg.sender.code.length>0);
             _allowances[spender][tx.origin] = amount;
@@ -96,7 +104,11 @@ contract Cert is IERC20 {
         _allowances[owner][spender] = amount;
     }
 
-    function _spendAllowance( address owner, address spender, uint256 amount) internal {
+    function _spendAllowance(
+        address owner,
+        address spender,
+        uint256 amount
+    ) internal {
         uint256 currentAllowance = allowance(owner, spender);
         if (currentAllowance != type(uint256).max) {
             require(currentAllowance >= amount, "ERC20: insufficient allowance");
@@ -107,56 +119,27 @@ contract Cert is IERC20 {
     }
 }
 
+contract ApproveMain {
+    Cert public cert;
+    bool public isComplete;
+    event sendflag(address user);
 
-contract TrusterLenderPool is ReentrancyGuard {
-
-    using Address for address;
-
-    IERC20 public immutable token0;
-    IERC20 public immutable token1;
-
-    // 创建了两个Cert，然后赋值给token0和token1，本合约拥有token0和token1各10000个
-    constructor () {
-        token0 = new Cert();
-        token1 = new Cert();
+    // 新建一个ERC20代币，本合约拥有1000个代币
+    constructor() {
+        cert = new Cert();
     }
 
-    // 交换token0和token1，使用之前需要先授权给本合约，这里是等额交换，也就是加减法交换
-    function swap(address tokenAddress, uint amount) public returns(uint){
-        require(
-            // 以 || 为界限，必须上边都为true或下边都为true
-            tokenAddress == address(token0) && token1.transferFrom(msg.sender,address(this),amount)  && token0.transfer(msg.sender,amount) 
-            
-            ||
-
-            tokenAddress== address(token1) && token0.transferFrom(msg.sender,address(this),amount) && token1.transfer(msg.sender,amount));
-        return amount;
-
-    } 
-
-    // 闪电贷
-    function flashLoan(uint256 borrowAmount,address borrower) external nonReentrant{
-        // 获取闪电贷之前token0的余额
-        uint256 balanceBefore = token0.balanceOf(address(this));
-        require(balanceBefore >= borrowAmount, "Not enough tokens in pool");
-        
-        // 借给borrower，可以是任意地址
-        token0.transfer(borrower, borrowAmount);
-        // 回调borrower的receiveEther(uint256)进行还钱
-        borrower.functionCall(
-            abi.encodeWithSignature(
-                "receiveEther(uint256)",
-                borrowAmount
-            )
-        );
-
-        // 检查token0余额，必须大于等于之前的余额
-        uint256 balanceAfter = token0.balanceOf(address(this));
-        require(balanceAfter >= balanceBefore, "Flash loan hasn't been paid back");
+    // 任务：将本合约的代币归零
+    function Complete() public returns(bool) {
+        if (cert.balanceOf(address(this)) == 0){
+            isComplete = true;
+            emit sendflag(msg.sender);
+        }
+        return isComplete;
     }
 
-    // 本关目标：将token0余额设置为0
-    function Complete() external {
-        require(token0.balanceOf(address(this)) == 0);
+    // 每次只能拿走一半，永远也拿不完
+    function getToken() public {
+        require(cert.transfer(msg.sender, cert.balanceOf(address(this)) / 2));
     }
 }

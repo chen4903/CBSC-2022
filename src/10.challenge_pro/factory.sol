@@ -1,7 +1,3 @@
-/**
- *Submitted for verification at hecoinfo.com on 2021-02-25
- */
-
 pragma solidity =0.5.16;
 
 interface IMdexFactory {
@@ -292,6 +288,7 @@ interface IHswapV2Callee {
     ) external;
 }
 
+// 交易所
 contract MdexERC20 is IMdexERC20 {
     using SafeMath for uint256;
 
@@ -423,6 +420,7 @@ contract MdexERC20 is IMdexERC20 {
     }
 }
 
+// 币对
 contract MdexPair is IMdexPair, MdexERC20 {
     using SafeMath for uint256;
     using UQ112x112 for uint224;
@@ -703,6 +701,7 @@ contract MdexPair is IMdexPair, MdexERC20 {
     }
 
     // force balances to match reserves
+    // 其实就是转账
     function skim(address to) external lock {
         address _token0 = token0;
         // gas savings
@@ -721,6 +720,7 @@ contract MdexPair is IMdexPair, MdexERC20 {
     }
 
     // force reserves to match balances
+    // 同步更新一下币对信息
     function sync() external lock {
         _update(
             IERC20(token0).balanceOf(address(this)),
@@ -730,6 +730,7 @@ contract MdexPair is IMdexPair, MdexERC20 {
         );
     }
 
+    // 计算价格
     function price(address token, uint256 baseDecimal)
         public
         view
@@ -772,10 +773,12 @@ contract MdexFactory is IMdexFactory {
         feeToSetter = _feeToSetter;
     }
 
+    // 获取所有币对的数量
     function allPairsLength() external view returns (uint256) {
         return allPairs.length;
     }
 
+    // 创建一个币对
     function createPair(address tokenA, address tokenB)
         external
         returns (address pair)
@@ -803,11 +806,13 @@ contract MdexFactory is IMdexFactory {
         emit PairCreated(token0, token1, pair, allPairs.length);
     }
 
+    // 手续费相关
     function setFeeTo(address _feeTo) external {
         require(msg.sender == feeToSetter, "MdexSwapFactory: FORBIDDEN");
         feeTo = _feeTo;
     }
 
+    // 手续费相关
     function setFeeToSetter(address _feeToSetter) external {
         require(msg.sender == feeToSetter, "MdexSwapFactory: FORBIDDEN");
         require(
@@ -817,12 +822,14 @@ contract MdexFactory is IMdexFactory {
         feeToSetter = _feeToSetter;
     }
 
+    // 手续费相关
     function setFeeToRate(uint256 _rate) external {
         require(msg.sender == feeToSetter, "MdexSwapFactory: FORBIDDEN");
         require(_rate > 0, "MdexSwapFactory: FEE_TO_RATE_OVERFLOW");
         feeToRate = _rate.sub(1);
     }
 
+    // 设置啥哈希
     function setInitCodeHash(bytes32 _initCodeHash) external {
         require(msg.sender == feeToSetter, "MdexSwapFactory: FORBIDDEN");
         require(
@@ -833,7 +840,7 @@ contract MdexFactory is IMdexFactory {
         initCode = true;
     }
 
-    // returns sorted token addresses, used to handle return values from pairs sorted in this order
+    // 币对排序
     function sortTokens(address tokenA, address tokenB)
         public
         pure
@@ -846,11 +853,12 @@ contract MdexFactory is IMdexFactory {
         require(token0 != address(0), "MdexSwapFactory: ZERO_ADDRESS");
     }
 
+    // 计算哈希
     function getInitCodeHash() public pure returns (bytes32) {
         return keccak256(abi.encodePacked(type(MdexPair).creationCode));
     }
 
-    // calculates the CREATE2 address for a pair without making any external calls
+    // CREATE2地址计算
     function pairFor(address tokenA, address tokenB)
         public
         view
@@ -871,7 +879,7 @@ contract MdexFactory is IMdexFactory {
         );
     }
 
-    // fetches and sorts the reserves for a pair
+    // 获取信息
     function getReserves(address tokenA, address tokenB)
         public
         view
@@ -886,7 +894,7 @@ contract MdexFactory is IMdexFactory {
             : (reserve1, reserve0);
     }
 
-    // given some amount of an asset and pair reserves, returns an equivalent amount of the other asset
+    // 计算价格
     function quote(
         uint256 amountA,
         uint256 reserveA,
@@ -900,7 +908,7 @@ contract MdexFactory is IMdexFactory {
         amountB = amountA.mul(reserveB) / reserveA;
     }
 
-    // given an input amount of an asset and pair reserves, returns the maximum output amount of the other asset
+    // 计算价格
     function getAmountOut(
         uint256 amountIn,
         uint256 reserveIn,
@@ -917,7 +925,7 @@ contract MdexFactory is IMdexFactory {
         amountOut = numerator / denominator;
     }
 
-    // given an output amount of an asset and pair reserves, returns a required input amount of the other asset
+    // 计算价格
     function getAmountIn(
         uint256 amountOut,
         uint256 reserveIn,
@@ -933,7 +941,7 @@ contract MdexFactory is IMdexFactory {
         amountIn = (numerator / denominator).add(1);
     }
 
-    // performs chained getAmountOut calculations on any number of pairs
+    // 计算价格
     function getAmountsOut(uint256 amountIn, address[] memory path)
         public
         view
@@ -951,7 +959,7 @@ contract MdexFactory is IMdexFactory {
         }
     }
 
-    // performs chained getAmountIn calculations on any number of pairs
+    // 计算价格
     function getAmountsIn(uint256 amountOut, address[] memory path)
         public
         view
@@ -1125,11 +1133,6 @@ library SafeMath {
         return result;
     }
 }
-
-// a library for handling binary fixed point numbers (https://en.wikipedia.org/wiki/Q_(number_format))
-
-// range: [0, 2**112 - 1]
-// resolution: 1 / 2**112
 
 library UQ112x112 {
     uint224 constant Q112 = 2**112;

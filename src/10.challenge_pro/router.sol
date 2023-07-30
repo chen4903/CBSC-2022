@@ -1,7 +1,3 @@
-/**
- *Submitted for verification at hecoinfo.com on 2021-02-04
- */
-
 pragma solidity =0.6.6;
 
 interface IMdexFactory {
@@ -523,6 +519,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         // only accept HT via fallback from the WHT contract
     }
 
+    // 获取币对
     function pairFor(address tokenA, address tokenB)
         public
         view
@@ -535,7 +532,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         swapMining = _swapMininng;
     }
 
-    // **** ADD LIQUIDITY ****
+    // 添加流动性
     function _addLiquidity(
         address tokenA,
         address tokenB,
@@ -580,6 +577,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         }
     }
 
+    // 添加流动性
     function addLiquidity(
         address tokenA,
         address tokenB,
@@ -614,6 +612,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         liquidity = IMdexPair(pair).mint(to);
     }
 
+    // 用ETH来添加流动性
     function addLiquidityETH(
         address token,
         uint256 amountTokenDesired,
@@ -651,7 +650,7 @@ contract MdexRouter is IMdexRouter, Ownable {
             TransferHelper.safeTransferETH(msg.sender, msg.value - amountETH);
     }
 
-    // **** REMOVE LIQUIDITY ****
+    // 移除流动性
     function removeLiquidity(
         address tokenA,
         address tokenB,
@@ -679,6 +678,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         require(amountB >= amountBMin, "MdexRouter: INSUFFICIENT_B_AMOUNT");
     }
 
+    // 移除流动性得到ETH
     function removeLiquidityETH(
         address token,
         uint256 liquidity,
@@ -707,6 +707,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         TransferHelper.safeTransferETH(to, amountETH);
     }
 
+    // permit链下签名移除流动性
     function removeLiquidityWithPermit(
         address tokenA,
         address tokenB,
@@ -742,6 +743,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         );
     }
 
+    // 链下签名移除流动性得到ETH
     function removeLiquidityETHWithPermit(
         address token,
         uint256 liquidity,
@@ -780,7 +782,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         );
     }
 
-    // **** REMOVE LIQUIDITY (supporting fee-on-transfer tokens) ****
+    // 移除流动性：但是看不懂是啥特点
     function removeLiquidityETHSupportingFeeOnTransferTokens(
         address token,
         uint256 liquidity,
@@ -807,6 +809,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         TransferHelper.safeTransferETH(to, amountETH);
     }
 
+    // 移除流动性：但是看不懂是啥特点
     function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
         address token,
         uint256 liquidity,
@@ -840,8 +843,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         );
     }
 
-    // **** SWAP ****
-    // requires the initial amount to have already been sent to the first pair
+    // 交换
     function _swap(
         uint256[] memory amounts,
         address[] memory path,
@@ -877,6 +879,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         }
     }
 
+    // 交换
     function swapExactTokensForTokens(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -904,6 +907,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         _swap(amounts, path, to);
     }
 
+    // 交换
     function swapTokensForExactTokens(
         uint256 amountOut,
         uint256 amountInMax,
@@ -931,6 +935,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         _swap(amounts, path, to);
     }
 
+    // 交换
     function swapExactETHForTokens(
         uint256 amountOutMin,
         address[] calldata path,
@@ -955,6 +960,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         _swap(amounts, path, to);
     }
 
+    // 交换
     function swapTokensForExactETH(
         uint256 amountOut,
         uint256 amountInMax,
@@ -985,6 +991,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
     }
 
+    // 交换
     function swapExactTokensForETH(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -1015,6 +1022,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         TransferHelper.safeTransferETH(to, amounts[amounts.length - 1]);
     }
 
+    // 交换
     function swapETHForExactTokens(
         uint256 amountOut,
         address[] calldata path,
@@ -1039,8 +1047,7 @@ contract MdexRouter is IMdexRouter, Ownable {
             TransferHelper.safeTransferETH(msg.sender, msg.value - amounts[0]);
     }
 
-    // **** SWAP (supporting fee-on-transfer tokens) ****
-    // requires the initial amount to have already been sent to the first pair
+    // 交换
     function _swapSupportingFeeOnTransferTokens(
         address[] memory path,
         address _to
@@ -1087,6 +1094,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         }
     }
 
+    // 交换
     function swapExactTokensForTokensSupportingFeeOnTransferTokens(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -1109,6 +1117,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         );
     }
 
+    // 交换
     function swapExactETHForTokensSupportingFeeOnTransferTokens(
         uint256 amountOutMin,
         address[] calldata path,
@@ -1128,6 +1137,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         );
     }
 
+    // 交换
     function swapExactTokensForETHSupportingFeeOnTransferTokens(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -1152,7 +1162,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         TransferHelper.safeTransferETH(to, amountOut);
     }
 
-    // **** LIBRARY FUNCTIONS ****
+    // 计算价格
     function quote(
         uint256 amountA,
         uint256 reserveA,
@@ -1161,6 +1171,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         return IMdexFactory(factory).quote(amountA, reserveA, reserveB);
     }
 
+    // 计算价格
     function getAmountOut(
         uint256 amountIn,
         uint256 reserveIn,
@@ -1170,6 +1181,7 @@ contract MdexRouter is IMdexRouter, Ownable {
             IMdexFactory(factory).getAmountOut(amountIn, reserveIn, reserveOut);
     }
 
+    // 计算价格
     function getAmountIn(
         uint256 amountOut,
         uint256 reserveIn,
@@ -1179,6 +1191,7 @@ contract MdexRouter is IMdexRouter, Ownable {
             IMdexFactory(factory).getAmountIn(amountOut, reserveIn, reserveOut);
     }
 
+    // 计算价格
     function getAmountsOut(uint256 amountIn, address[] memory path)
         public
         view
@@ -1188,6 +1201,7 @@ contract MdexRouter is IMdexRouter, Ownable {
         return IMdexFactory(factory).getAmountsOut(amountIn, path);
     }
 
+    // 计算价格
     function getAmountsIn(uint256 amountOut, address[] memory path)
         public
         view
@@ -1197,8 +1211,6 @@ contract MdexRouter is IMdexRouter, Ownable {
         return IMdexFactory(factory).getAmountsIn(amountOut, path);
     }
 }
-
-// a library for performing overflow-safe math, courtesy of DappHub (https://github.com/dapphub/ds-math)
 
 library SafeMath {
     uint256 constant WAD = 10**18;
@@ -1356,7 +1368,6 @@ library SafeMath {
     }
 }
 
-// helper methods for interacting with ERC20 tokens and sending ETH that do not consistently return true/false
 library TransferHelper {
     function safeApprove(
         address token,
